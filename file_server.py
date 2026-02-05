@@ -2,6 +2,7 @@ import streamlit as st
 import io
 import json
 from datetime import datetime
+from pathlib import Path
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
@@ -9,6 +10,7 @@ from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 # 설정
 FOLDER_ID = "1MiUu9OsEBUzUcWFoD005-n89HWLnz5lK"
 SCOPES = ["https://www.googleapis.com/auth/drive"]
+BASE_DIR = Path(__file__).parent
 
 st.set_page_config(page_title="파일 저장소", page_icon="📁", layout="wide")
 
@@ -20,7 +22,8 @@ def get_drive_service():
     try:
         creds_dict = st.secrets["gcp_service_account"]
     except:
-        with open("credentials.json", "r") as f:
+        creds_path = BASE_DIR / "credentials.json"
+        with open(creds_path, "r") as f:
             creds_dict = json.load(f)
 
     creds = service_account.Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
