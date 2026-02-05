@@ -1,0 +1,12 @@
+# Credentials
+credentials.json
+token.json
+*.pickle
+
+# Python
+__pycache__/
+*.py[cod]
+.env
+
+# Uploads folder (local testing)
+uploads/
