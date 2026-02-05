@@ -3,7 +3,8 @@ import io
 import json
 from datetime import datetime
 from pathlib import Path
-from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 
@@ -15,18 +16,42 @@ BASE_DIR = Path(__file__).parent
 st.set_page_config(page_title="파일 저장소", page_icon="📁", layout="wide")
 
 
-@st.cache_resource
-def get_drive_service():
-    """Google Drive API 서비스 생성"""
-    # Streamlit Cloud: secrets 사용 / 로컬: credentials.json 사용
+def get_oauth_config():
+    """OAuth 설정 가져오기"""
     try:
-        creds_dict = st.secrets["gcp_service_account"]
+        # Streamlit Cloud: secrets 사용
+        return {
+            "installed": {
+                "client_id": st.secrets["oauth"]["client_id"],
+                "client_secret": st.secrets["oauth"]["client_secret"],
+                "project_id": st.secrets["oauth"]["project_id"],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "redirect_uris": ["http://localhost"]
+            }
+        }
     except:
-        creds_path = BASE_DIR / "credentials.json"
+        # 로컬: client_secret.json 사용
+        creds_path = BASE_DIR / "client_secret.json"
         with open(creds_path, "r") as f:
-            creds_dict = json.load(f)
+            return json.load(f)
 
-    creds = service_account.Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+
+def get_drive_service():
+    """Google Drive API 서비스 생성 (OAuth)"""
+    if "credentials" not in st.session_state:
+        return None
+
+    creds_data = st.session_state["credentials"]
+    creds = Credentials(
+        token=creds_data["token"],
+        refresh_token=creds_data.get("refresh_token"),
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=get_oauth_config()["installed"]["client_id"],
+        client_secret=get_oauth_config()["installed"]["client_secret"],
+        scopes=SCOPES
+    )
     return build("drive", "v3", credentials=creds)
 
 
@@ -67,11 +92,56 @@ def delete_file(service, file_id):
 # 메인 앱
 st.title("📁 파일 저장소")
 
-try:
-    service = get_drive_service()
-except Exception as e:
-    st.error(f"Google Drive 연결 실패: {e}")
+# OAuth 인증 처리
+query_params = st.query_params
+
+if "code" in query_params and "credentials" not in st.session_state:
+    # OAuth 콜백 처리
+    try:
+        config = get_oauth_config()
+        flow = Flow.from_client_config(
+            config,
+            scopes=SCOPES,
+            redirect_uri=st.secrets.get("oauth", {}).get("redirect_uri", "http://localhost:8501")
+        )
+        flow.fetch_token(code=query_params["code"])
+        creds = flow.credentials
+        st.session_state["credentials"] = {
+            "token": creds.token,
+            "refresh_token": creds.refresh_token
+        }
+        st.query_params.clear()
+        st.rerun()
+    except Exception as e:
+        st.error(f"인증 실패: {e}")
+
+# 로그인 상태 확인
+service = get_drive_service()
+
+if service is None:
+    st.warning("Google Drive에 로그인이 필요합니다.")
+
+    if st.button("🔐 Google 로그인", type="primary"):
+        config = get_oauth_config()
+        redirect_uri = st.secrets.get("oauth", {}).get("redirect_uri", "http://localhost:8501")
+        flow = Flow.from_client_config(
+            config,
+            scopes=SCOPES,
+            redirect_uri=redirect_uri
+        )
+        auth_url, _ = flow.authorization_url(
+            access_type="offline",
+            include_granted_scopes="true",
+            prompt="consent"
+        )
+        st.markdown(f"[👉 여기를 클릭하여 로그인]({auth_url})")
     st.stop()
+
+# 로그아웃 버튼
+with st.sidebar:
+    if st.button("🚪 로그아웃"):
+        del st.session_state["credentials"]
+        st.rerun()
 
 # 파일 업로드 섹션
 st.header("파일 업로드")
@@ -88,7 +158,6 @@ if uploaded_files:
             st.success(f"✅ {uploaded_file.name} 업로드 완료!")
         except Exception as e:
             st.error(f"❌ {uploaded_file.name} 업로드 실패: {e}")
-    st.cache_resource.clear()
     st.rerun()
 
 st.divider()
@@ -96,7 +165,12 @@ st.divider()
 # 파일 목록 섹션
 st.header("저장된 파일")
 
-files = list_files(service)
+try:
+    files = list_files(service)
+except Exception as e:
+    st.error(f"파일 목록 조회 실패: {e}")
+    files = []
+
 if not files:
     st.info("업로드된 파일이 없습니다.")
 else:
@@ -107,7 +181,6 @@ else:
             st.write(f"📄 **{file['name']}**")
 
         with col2:
-            # 파일 크기 표시
             size = int(file.get("size", 0))
             if size < 1024:
                 size_str = f"{size} B"
@@ -120,7 +193,6 @@ else:
             st.caption(f"{size_str} | {created.strftime('%Y-%m-%d %H:%M')}")
 
         with col3:
-            # 다운로드 버튼
             try:
                 file_data = download_file(service, file["id"])
                 st.download_button(
@@ -133,11 +205,9 @@ else:
                 st.button("⬇️ 다운로드", disabled=True, key=f"download_{file['id']}")
 
         with col4:
-            # 삭제 버튼
             if st.button("🗑️ 삭제", key=f"delete_{file['id']}"):
                 try:
                     delete_file(service, file["id"])
-                    st.cache_resource.clear()
                     st.rerun()
                 except Exception as e:
                     st.error(f"삭제 실패: {e}")
@@ -146,7 +216,6 @@ else:
         mime_type = file.get("mimeType", "")
         file_name = file["name"].lower()
 
-        # 이미지 미리보기
         if mime_type.startswith("image/"):
             with st.expander("🖼️ 미리보기"):
                 try:
@@ -155,7 +224,6 @@ else:
                 except:
                     st.error("미리보기 실패")
 
-        # 텍스트 미리보기
         elif any(file_name.endswith(ext) for ext in [".txt", ".md", ".py", ".json", ".csv", ".html", ".css", ".js"]):
             with st.expander("📝 미리보기"):
                 try:
@@ -172,7 +240,6 @@ else:
                 except Exception as e:
                     st.error(f"미리보기 실패: {e}")
 
-        # PDF 안내
         elif file_name.endswith(".pdf"):
             with st.expander("📑 PDF 파일"):
                 st.info("PDF 파일은 다운로드 후 확인해주세요.")
@@ -190,4 +257,4 @@ with st.sidebar:
     else:
         st.write(f"**총 용량:** {total_size / (1024 * 1024):.1f} MB")
 
-    st.caption("Google Drive 연동")
+    st.caption("Google Drive 연동 (OAuth)")
