@@ -65,17 +65,21 @@ uploaded_files = st.file_uploader(
 )
 
 if uploaded_files:
+    if "uploaded" not in st.session_state:
+        st.session_state.uploaded = set()
+
     for uploaded_file in uploaded_files:
-        try:
-            # 파일 이름 중복 방지 (타임스탬프 추가)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_")
-            file_name = timestamp + uploaded_file.name
-            upload_file(client, file_name, uploaded_file.getvalue(), uploaded_file.type or "application/octet-stream")
-            st.success(f"✅ {uploaded_file.name} 업로드 완료!")
-        except Exception as e:
-            st.error(f"❌ {uploaded_file.name} 업로드 실패: {e}")
-    st.cache_resource.clear()
-    st.rerun()
+        file_key = f"{uploaded_file.name}_{uploaded_file.size}"
+        if file_key not in st.session_state.uploaded:
+            try:
+                # 파일 이름 중복 방지 (타임스탬프 추가)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_")
+                file_name = timestamp + uploaded_file.name
+                upload_file(client, file_name, uploaded_file.getvalue(), uploaded_file.type or "application/octet-stream")
+                st.success(f"✅ {uploaded_file.name} 업로드 완료!")
+                st.session_state.uploaded.add(file_key)
+            except Exception as e:
+                st.error(f"❌ {uploaded_file.name} 업로드 실패: {e}")
 
 st.divider()
 
