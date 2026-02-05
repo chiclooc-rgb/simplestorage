@@ -241,7 +241,8 @@ else:
             if any(file_lower.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"]):
                 try:
                     img_data = download_file(client, file_name)
-                    st.image(img_data, use_container_width=True)
+                    # 이미지를 원본 크기로 표시 (최대 너비 제한)
+                    st.image(img_data, use_column_width=False)
                 except:
                     st.error("미리보기 실패")
 
