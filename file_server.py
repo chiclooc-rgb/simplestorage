@@ -1,7 +1,9 @@
 import streamlit as st
 import io
+import uuid
 from datetime import datetime
 from supabase import create_client
+from urllib.parse import quote
 
 # 설정
 SUPABASE_URL = st.secrets.get("supabase", {}).get("url", "https://dwopbzbjrhnfkwewtwuy.supabase.co")
@@ -72,11 +74,19 @@ if uploaded_files:
         file_key = f"{uploaded_file.name}_{uploaded_file.size}"
         if file_key not in st.session_state.uploaded:
             try:
-                # 파일 이름 중복 방지 (타임스탬프 추가)
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_")
-                file_name = timestamp + uploaded_file.name
-                upload_file(client, file_name, uploaded_file.getvalue(), uploaded_file.type or "application/octet-stream")
-                st.success(f"✅ {uploaded_file.name} 업로드 완료!")
+                # 파일 확장자 추출
+                original_name = uploaded_file.name
+                ext = original_name.split(".")[-1] if "." in original_name else ""
+                # UUID 기반 파일명 (한글 문제 해결)
+                safe_name = f"{uuid.uuid4().hex}.{ext}" if ext else uuid.uuid4().hex
+
+                # 원본 파일명을 메타데이터로 저장하기 위해 매핑 저장
+                if "file_mapping" not in st.session_state:
+                    st.session_state.file_mapping = {}
+                st.session_state.file_mapping[safe_name] = original_name
+
+                upload_file(client, safe_name, uploaded_file.getvalue(), uploaded_file.type or "application/octet-stream")
+                st.success(f"✅ {original_name} 업로드 완료!")
                 st.session_state.uploaded.add(file_key)
             except Exception as e:
                 st.error(f"❌ {uploaded_file.name} 업로드 실패: {e}")
@@ -105,8 +115,8 @@ else:
         col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
 
         file_name = file.get("name", "")
-        # 타임스탬프 제거한 표시 이름
-        display_name = file_name[16:] if len(file_name) > 16 and file_name[15] == "_" else file_name
+        # 파일명 (UUID면 그대로 표시, 나중에 개선 가능)
+        display_name = file_name
 
         with col1:
             st.write(f"📄 **{display_name}**")
