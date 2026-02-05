@@ -12,6 +12,58 @@ BUCKET_NAME = "files"
 
 st.set_page_config(page_title="파일 저장소", page_icon="📁", layout="wide")
 
+# CSS로 여백 최소화 - 빽빽하게
+st.markdown("""
+<style>
+    /* 모든 요소 여백 최소화 */
+    .stMarkdown {
+        margin-bottom: 0 !important;
+        margin-top: 0 !important;
+        padding: 0 !important;
+    }
+    /* divider 여백 최소화 */
+    hr {
+        margin-top: 0.2rem !important;
+        margin-bottom: 0.2rem !important;
+    }
+    /* 버튼 여백 최소화 */
+    .stButton {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+    .stButton > button {
+        padding: 0.25rem 0.5rem !important;
+        height: 2rem !important;
+    }
+    /* 다운로드 버튼 */
+    .stDownloadButton {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+    .stDownloadButton > button {
+        padding: 0.25rem 0.5rem !important;
+        height: 2rem !important;
+    }
+    /* 전체 패딩 최소화 */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    /* 컬럼 간격 최소화 */
+    [data-testid="column"] {
+        padding: 0 0.1rem !important;
+    }
+    /* 행 간격 최소화 */
+    .row-widget {
+        margin-bottom: 0 !important;
+    }
+    /* caption 여백 제거 */
+    .stCaption {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 @st.cache_resource
 def get_supabase_client():
@@ -138,7 +190,7 @@ else:
             col1, col2, col3, col4 = st.columns([4, 2, 1, 1])
 
         with col1:
-            st.markdown(f"📄 **{display_name}**")
+            st.markdown(f"<p style='margin:0; padding:0;'>📄 <b>{display_name}</b></p>", unsafe_allow_html=True)
 
         with col2:
             size = file.get("metadata", {}).get("size", 0)
@@ -150,7 +202,7 @@ else:
                 size_str = f"{size / (1024 * 1024):.1f} MB"
 
             created = file.get("created_at", "")[:10]
-            st.caption(f"{size_str} | {created}")
+            st.markdown(f"<p style='margin:0; padding:0; font-size:0.8rem; color:gray;'>{size_str} | {created}</p>", unsafe_allow_html=True)
 
         with col3:
             try:
@@ -211,7 +263,7 @@ else:
             elif file_lower.endswith(".pdf"):
                 st.info("PDF 파일은 다운로드 후 확인해주세요.")
 
-        st.divider()
+        st.markdown("<hr style='margin:0.3rem 0; border:0; border-top:1px solid #ddd;'>", unsafe_allow_html=True)
 
 # 사이드바 정보
 with st.sidebar:
