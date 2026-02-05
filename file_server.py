@@ -108,8 +108,6 @@ else:
     files = sorted(files, key=lambda x: x.get("created_at", ""), reverse=True)
 
     for file in files:
-        col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
-
         file_name = file.get("name", "")
         # 원본 파일명 복원
         import base64
@@ -125,8 +123,22 @@ else:
         else:
             display_name = file_name
 
+        # 미리보기 가능 여부 확인
+        file_lower = display_name.lower()
+        has_preview = (
+            any(file_lower.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"]) or
+            any(file_lower.endswith(ext) for ext in [".txt", ".md", ".py", ".json", ".csv", ".html", ".css", ".js"]) or
+            file_lower.endswith(".pdf")
+        )
+
+        # 컬럼 구성: 파일명 | 정보 | 다운로드 | 삭제 | 미리보기
+        if has_preview:
+            col1, col2, col3, col4, col5 = st.columns([4, 2, 1, 1, 1])
+        else:
+            col1, col2, col3, col4 = st.columns([4, 2, 1, 1])
+
         with col1:
-            st.write(f"📄 **{display_name}**")
+            st.markdown(f"📄 **{display_name}**")
 
         with col2:
             size = file.get("metadata", {}).get("size", 0)
@@ -147,13 +159,14 @@ else:
                     label="⬇️ 다운로드",
                     data=file_data,
                     file_name=display_name,
-                    key=f"download_{file_name}"
+                    key=f"download_{file_name}",
+                    use_container_width=True
                 )
             except:
-                st.button("⬇️ 다운로드", disabled=True, key=f"download_{file_name}")
+                st.button("⬇️ 다운로드", disabled=True, key=f"download_{file_name}", use_container_width=True)
 
         with col4:
-            if st.button("🗑️ 삭제", key=f"delete_{file_name}"):
+            if st.button("🗑️ 삭제", key=f"delete_{file_name}", use_container_width=True):
                 try:
                     delete_file(client, file_name)
                     st.cache_resource.clear()
@@ -161,19 +174,26 @@ else:
                 except Exception as e:
                     st.error(f"삭제 실패: {e}")
 
-        # 미리보기
-        file_lower = display_name.lower()
+        # 미리보기 버튼
+        if has_preview:
+            with col5:
+                preview_key = f"preview_{file_name}"
+                if preview_key not in st.session_state:
+                    st.session_state[preview_key] = False
 
-        if any(file_lower.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"]):
-            with st.expander("🖼️ 미리보기"):
+                if st.button("🖼️ 미리보기", key=preview_key + "_btn", use_container_width=True):
+                    st.session_state[preview_key] = not st.session_state[preview_key]
+
+        # 미리보기 내용 표시
+        if has_preview and st.session_state.get(f"preview_{file_name}", False):
+            if any(file_lower.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"]):
                 try:
                     img_data = download_file(client, file_name)
-                    st.image(img_data)
+                    st.image(img_data, use_container_width=True)
                 except:
                     st.error("미리보기 실패")
 
-        elif any(file_lower.endswith(ext) for ext in [".txt", ".md", ".py", ".json", ".csv", ".html", ".css", ".js"]):
-            with st.expander("📝 미리보기"):
+            elif any(file_lower.endswith(ext) for ext in [".txt", ".md", ".py", ".json", ".csv", ".html", ".css", ".js"]):
                 try:
                     text_data = download_file(client, file_name).decode("utf-8")
                     if file_lower.endswith(".md"):
@@ -181,15 +201,14 @@ else:
                     elif file_lower.endswith(".csv"):
                         import pandas as pd
                         df = pd.read_csv(io.StringIO(text_data))
-                        st.dataframe(df)
+                        st.dataframe(df, use_container_width=True)
                     else:
                         ext = file_lower.split(".")[-1]
                         st.code(text_data, language=ext if ext in ["py", "json", "html", "css", "js"] else None)
                 except Exception as e:
                     st.error(f"미리보기 실패: {e}")
 
-        elif file_lower.endswith(".pdf"):
-            with st.expander("📑 PDF 파일"):
+            elif file_lower.endswith(".pdf"):
                 st.info("PDF 파일은 다운로드 후 확인해주세요.")
 
         st.divider()
