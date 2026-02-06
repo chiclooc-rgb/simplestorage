@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Storage</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%81</text></svg>">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @font-face {
+            font-family: 'Vitro Core';
+            src: url('./VITRO CORE TTF.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-white: #FFFFFF;
+            --bg-light: #F7F8FA;
+            --bg-hero: #2D1B4E;
+            --bg-hero-end: #4A2D7A;
+            --border: #F0F2F5;
+            --border-mid: #E5E8EB;
+            --green: #7C3AED;
+            --green-hover: #6D28D9;
+            --blue: #8B5CF6;
+            --blue-hover: #7C3AED;
+            --red: #FF4757;
+            --red-hover: #FF6B81;
+            --text-primary: #1A1E27;
+            --text-secondary: #555961;
+            --text-tertiary: #888D96;
+            --text-light: #B4B8BF;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --radius-xs: 6px;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+            background: var(--bg-white);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== HERO HEADER ===== */
+        .hero {
+            background: linear-gradient(135deg, var(--bg-hero) 0%, var(--bg-hero-end) 100%);
+            padding: 56px 24px 48px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -60%;
+            left: -20%;
+            width: 60%;
+            height: 200%;
+            background: radial-gradient(ellipse, rgba(139,92,246,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -40%;
+            right: -10%;
+            width: 50%;
+            height: 160%;
+            background: radial-gradient(ellipse, rgba(167,139,250,0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-family: 'Vitro Core', sans-serif;
+            font-style: italic;
+            font-size: 56px;
+            font-weight: 400;
+            color: #FFFFFF;
+            letter-spacing: 2px;
+            margin-bottom: 28px;
+        }
+
+        .cta-upload {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--green);
+            color: #fff;
+            border: none;
+            padding: 16px 44px;
+            border-radius: var(--radius-sm);
+            font-family: 'Vitro Core', sans-serif;
+            font-style: italic;
+            font-size: 20px;
+            font-weight: 400;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 16px rgba(124,58,237,0.35);
+        }
+
+        .cta-upload:hover {
+            background: var(--green-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(124,58,237,0.45);
+        }
+
+        .cta-upload:active { transform: translateY(0); }
+
+        .cta-upload svg {
+            width: 20px; height: 20px;
+            transition: transform 0.2s ease;
+        }
+
+        /* Hero drop zone */
+        .hero-dropzone {
+            max-width: 560px;
+            margin: 28px auto 0;
+            border: 2px dashed rgba(255,255,255,0.25);
+            border-radius: var(--radius);
+            padding: 32px 20px 28px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .hero-dropzone:hover,
+        .hero-dropzone.drag-over {
+            border-color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.06);
+        }
+
+        .hero-dropzone > svg {
+            width: 36px; height: 36px;
+            color: rgba(255,255,255,0.35);
+            margin-bottom: 10px;
+        }
+
+        .hero-dropzone p {
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 16px;
+        }
+
+        .hero-dropzone .cta-upload {
+            box-shadow: none;
+        }
+
+        .cta-upload:hover svg { transform: translateX(3px); }
+
+        /* ===== MAIN LAYOUT ===== */
+        .main-wrap {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 32px 24px 64px;
+            display: flex;
+            gap: 28px;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: 260px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 24px;
+            height: fit-content;
+        }
+
+        .stats-card {
+            background: var(--bg-light);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .stats-card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-mid);
+        }
+
+        .stat-row:last-child { border-bottom: none; }
+
+        .stat-row .label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .stat-row .value {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .storage-bar {
+            margin-top: 14px;
+            height: 5px;
+            background: var(--border-mid);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .storage-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8B5CF6 0%, #7C3AED 100%);
+            border-radius: 3px;
+            transition: width 0.4s ease;
+            width: 0%;
+        }
+
+        .filter-card {
+            background: var(--bg-light);
+            border-radius: var(--radius);
+            padding: 16px;
+        }
+
+        .filter-card h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .filter-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            padding: 8px 12px;
+            border-radius: var(--radius-xs);
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-bottom: 2px;
+        }
+
+        .filter-btn:hover { background: var(--border); color: var(--text-primary); }
+        .filter-btn.active { background: var(--bg-white); color: var(--text-primary); font-weight: 600; box-shadow: var(--shadow-sm); }
+
+        /* ===== FILE AREA ===== */
+        .file-area { flex: 1; min-width: 0; }
+
+        /* Upload Zone */
+        .upload-zone {
+            margin-bottom: 28px;
+            animation: slideDown 0.3s ease;
+        }
+
+        .upload-dropzone {
+            border: 2px dashed var(--border-mid);
+            border-radius: var(--radius);
+            padding: 44px 24px;
+            text-align: center;
+            background: var(--bg-light);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .upload-dropzone:hover,
+        .upload-dropzone.drag-over {
+            border-color: var(--green);
+            background: #f5f0ff;
+        }
+
+        .upload-dropzone svg {
+            width: 48px; height: 48px;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+        }
+
+        .upload-dropzone p {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .upload-dropzone .help {
+            font-size: 13px;
+            color: var(--text-tertiary);
+        }
+
+        .upload-progress {
+            margin-top: 16px;
+        }
+
+        .upload-progress-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .upload-progress-bar {
+            flex: 1;
+            height: 4px;
+            background: var(--border-mid);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .upload-progress-bar-fill {
+            height: 100%;
+            background: var(--green);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        /* List Header */
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .list-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            padding: 0 8px;
+            background: var(--blue);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 12px;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 2px;
+            background: var(--bg-light);
+            border-radius: var(--radius-xs);
+            padding: 3px;
+        }
+
+        .view-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px; height: 32px;
+            border: none;
+            background: transparent;
+            border-radius: 5px;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            transition: all 0.15s ease;
+        }
+
+        .view-btn:hover { color: var(--text-primary); }
+
+        .view-btn.active {
+            background: var(--bg-white);
+            color: var(--text-primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .view-btn svg { width: 18px; height: 18px; }
+
+        /* ===== GRID VIEW ===== */
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .file-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            transition: all 0.2s ease;
+            cursor: default;
+        }
+
+        .file-card:hover {
+            border-color: var(--blue);
+            box-shadow: 0 8px 20px rgba(124,58,237,0.12);
+            transform: translateY(-2px);
+        }
+
+        .file-card-preview {
+            width: 100%;
+            aspect-ratio: 16/8;
+            background: var(--bg-light);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .file-card-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .file-card-icon {
+            font-size: 36px;
+            opacity: 0.6;
+        }
+
+        .file-card-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 4px;
+        }
+
+        .file-card-meta {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .file-card-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .card-btn {
+            flex: 1;
+            padding: 7px 0;
+            border: 1px solid var(--border-mid);
+            border-radius: var(--radius-xs);
+            background: var(--bg-white);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            color: var(--text-secondary);
+        }
+
+        .card-btn:hover { background: var(--bg-light); border-color: var(--text-tertiary); }
+
+        .card-btn.download:hover { color: var(--blue); border-color: var(--blue); background: #f0f8ff; }
+        .card-btn.preview:hover { color: var(--green); border-color: var(--green); background: #f5f0ff; }
+        .card-btn.delete:hover { color: var(--red); border-color: var(--red); background: #fff5f5; }
+
+        /* ===== LIST VIEW ===== */
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .file-list-item {
+            display: grid;
+            grid-template-columns: 32px 1fr 80px 90px auto;
+            gap: 12px;
+            align-items: center;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s ease;
+        }
+
+        .file-list-item:last-child { border-bottom: none; }
+        .file-list-item:hover { background: var(--bg-light); }
+
+        .file-list-icon { font-size: 22px; text-align: center; }
+
+        .file-list-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-list-size, .file-list-date {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .file-list-btns {
+            display: flex;
+            gap: 4px;
+        }
+
+        .list-btn {
+            width: 32px; height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            border-radius: var(--radius-xs);
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.15s ease;
+        }
+
+        .list-btn:hover { background: var(--border); }
+        .list-btn.delete:hover { background: #fff0f0; }
+
+        /* ===== STATES ===== */
+        .loading-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 0;
+            gap: 16px;
+        }
+
+        .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--green);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-wrap p { font-size: 14px; color: var(--text-tertiary); }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 0;
+            gap: 12px;
+        }
+
+        .empty-state svg { width: 64px; height: 64px; color: var(--border-mid); }
+        .empty-state h3 { font-size: 16px; color: var(--text-secondary); }
+        .empty-state p { font-size: 13px; color: var(--text-tertiary); }
+
+        /* ===== MODAL ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active { display: flex; animation: fadeIn 0.2s ease; }
+
+        .modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            position: relative;
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.3);
+            z-index: 1001;
+            animation: scaleIn 0.2s ease;
+            min-width: 400px;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: calc(100% - 40px);
+        }
+
+        .modal-close {
+            width: 32px; height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            font-size: 20px;
+            color: var(--text-tertiary);
+            border-radius: var(--radius-xs);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .modal-close:hover { background: var(--bg-light); color: var(--text-primary); }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-body img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            border-radius: var(--radius-sm);
+        }
+
+        .modal-body pre {
+            background: var(--bg-light);
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .modal-body table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .modal-body th, .modal-body td {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .modal-body th {
+            background: var(--bg-light);
+            font-weight: 600;
+        }
+
+        /* ===== TOAST ===== */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--bg-white);
+            border-radius: var(--radius-sm);
+            padding: 14px 18px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 280px;
+            max-width: 400px;
+            animation: slideInRight 0.3s ease;
+            border-left: 4px solid var(--blue);
+        }
+
+        .toast.success { border-left-color: var(--green); }
+        .toast.error { border-left-color: var(--red); }
+
+        .toast-icon { font-size: 18px; flex-shrink: 0; }
+        .toast-msg { font-size: 13px; color: var(--text-primary); flex: 1; }
+
+        .toast.removing { animation: slideOutRight 0.3s ease forwards; }
+
+        /* ===== DELETE CONFIRM ===== */
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(2px);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.15s ease;
+        }
+
+        .confirm-box {
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            padding: 28px;
+            max-width: 380px;
+            width: 90%;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            animation: scaleIn 0.2s ease;
+        }
+
+        .confirm-box h4 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .confirm-box p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            word-break: break-all;
+        }
+
+        .confirm-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .confirm-btns button {
+            flex: 1;
+            padding: 10px 0;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border-mid);
+            background: var(--bg-white);
+            color: var(--text-secondary);
+            transition: all 0.15s ease;
+        }
+
+        .confirm-btns button:hover { background: var(--bg-light); }
+
+        .confirm-btns .danger {
+            background: var(--red);
+            color: #fff;
+            border-color: var(--red);
+        }
+
+        .confirm-btns .danger:hover { background: var(--red-hover); }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1023px) {
+            .file-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+        }
+
+        @media (max-width: 767px) {
+            .hero { padding: 40px 16px 36px; }
+            .hero h1 { font-size: 32px; }
+
+            .main-wrap {
+                flex-direction: column;
+                padding: 20px 16px 48px;
+                gap: 20px;
+            }
+
+            .sidebar {
+                width: 100%;
+                position: static;
+                display: flex;
+                gap: 12px;
+            }
+
+            .stats-card, .filter-card { flex: 1; margin-bottom: 0; }
+
+            .file-grid { grid-template-columns: 1fr; }
+
+            .file-list-item {
+                grid-template-columns: 28px 1fr auto;
+                gap: 8px;
+            }
+
+            .file-list-size, .file-list-date { display: none; }
+
+            .modal-content { min-width: 0; width: 95vw; }
+        }
+
+        /* Screen reader only */
+        .sr-only {
+            position: absolute;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Hero Header -->
+<header class="hero">
+    <div class="hero-content">
+        <h1>SIMPLE STORAGE</h1>
+        <div class="hero-dropzone" id="heroDropzone">
+            <p>파일을 여기에 드래그하거나 클릭하세요</p>
+            <button class="cta-upload" id="uploadTrigger">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span>UPLOAD</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- Main Layout -->
+<div class="main-wrap">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="stats-card">
+            <h3>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                저장소 정보
+            </h3>
+            <div class="stat-row">
+                <span class="label">파일 개수</span>
+                <span class="value" id="fileCount">-</span>
+            </div>
+            <div class="stat-row">
+                <span class="label">총 용량</span>
+                <span class="value" id="totalSize">-</span>
+            </div>
+            <div class="storage-bar">
+                <div class="storage-bar-fill" id="storageBar"></div>
+            </div>
+        </div>
+
+        <div class="filter-card">
+            <h4>필터</h4>
+            <button class="filter-btn active" data-filter="all">전체 파일</button>
+            <button class="filter-btn" data-filter="image">이미지</button>
+            <button class="filter-btn" data-filter="document">문서</button>
+            <button class="filter-btn" data-filter="code">코드</button>
+            <button class="filter-btn" data-filter="other">기타</button>
+        </div>
+    </aside>
+
+    <!-- File Area -->
+    <section class="file-area">
+        <!-- Upload Zone -->
+        <div class="upload-zone" id="uploadZone" style="display:none;">
+            <input type="file" id="fileInput" multiple hidden>
+            <div class="upload-dropzone" id="dropzone">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <p>클릭하거나 파일을 드래그하세요</p>
+                <span class="help">여러 파일을 동시에 업로드할 수 있습니다</span>
+            </div>
+            <div class="upload-progress" id="uploadProgress"></div>
+        </div>
+
+        <!-- List Header -->
+        <div class="list-header">
+            <h2>저장된 파일 <span class="badge" id="fileBadge">0</span></h2>
+            <div class="view-toggle">
+                <button class="view-btn" data-view="grid" title="그리드 뷰">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                    </svg>
+                </button>
+                <button class="view-btn active" data-view="list" title="리스트 뷰">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                        <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+                        <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- File Container -->
+        <div id="fileContainer"></div>
+
+        <!-- Loading State -->
+        <div class="loading-wrap" id="loading">
+            <div class="spinner"></div>
+            <p>파일 목록을 불러오는 중...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <h3>업로드된 파일이 없습니다</h3>
+            <p>파일을 업로드하여 시작하세요</p>
+        </div>
+    </section>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal" id="previewModal">
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">미리보기</h3>
+            <button class="modal-close" id="modalClose">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Delete Confirm Container -->
+<div id="confirmContainer"></div>
+
+<script>
+// ===== CONFIG =====
+const CONFIG = {
+    SUPABASE_URL: 'https://dwopbzbjrhnfkwewtwuy.supabase.co',
+    SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3b3BiemJqcmhuZmt3ZXd0d3V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyMjM3OTEsImV4cCI6MjA4NTc5OTc5MX0.YvE89i7wmdudQ079gQEhdbA7ajZglLc7rGvdRyeJoLE',
+    BUCKET: 'files',
+    PREVIEW_TYPES: {
+        image: ['.png','.jpg','.jpeg','.gif','.webp','.bmp','.svg'],
+        text: ['.txt','.md','.json','.csv','.xml','.yaml','.yml'],
+        code: ['.py','.js','.html','.css','.java','.cpp','.c','.ts','.jsx','.tsx','.go','.rs','.rb','.php','.sh','.bat'],
+        pdf: ['.pdf']
+    }
+};
+
+// ===== STATE =====
+const State = {
+    client: null,
+    files: [],
+    view: 'list',
+    filter: 'all',
+    uploadOpen: false
+};
+
+// ===== UTILS =====
+const Utils = {
+    encodeFileName(name) {
+        const uuid = crypto.randomUUID ? crypto.randomUUID().replace(/-/g,'') :
+            'xxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16));
+        const lastDot = name.lastIndexOf('.');
+        const ext = lastDot !== -1 ? name.substring(lastDot + 1) : '';
+        // URL-safe base64
+        const encoded = btoa(unescape(encodeURIComponent(name)))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        return ext ? `${uuid}__${encoded}.${ext}` : `${uuid}__${encoded}`;
+    },
+
+    decodeFileName(stored) {
+        if (!stored.includes('__')) return stored;
+        try {
+            let encoded = stored.split('__')[1];
+            const lastDot = encoded.lastIndexOf('.');
+            if (lastDot !== -1) encoded = encoded.substring(0, lastDot);
+            encoded = encoded.replace(/-/g, '+').replace(/_/g, '/');
+            // Add padding
+            while (encoded.length % 4) encoded += '=';
+            return decodeURIComponent(escape(atob(encoded)));
+        } catch { return stored; }
+    },
+
+    formatSize(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    },
+
+    formatDate(str) {
+        if (!str) return '';
+        const d = new Date(str);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    },
+
+    getExt(name) {
+        const i = name.lastIndexOf('.');
+        return i !== -1 ? name.substring(i).toLowerCase() : '';
+    },
+
+    getIcon(name) {
+        const ext = this.getExt(name);
+        // PDF 아이콘
+        if (ext === '.pdf') return '<svg viewBox="0 0 40 40" width="36" height="36"><rect x="4" y="2" width="32" height="36" rx="3" fill="#E53935" opacity="0.15"/><rect x="4" y="2" width="32" height="36" rx="3" stroke="#E53935" stroke-width="1.5" fill="none"/><text x="20" y="26" text-anchor="middle" font-size="11" font-weight="700" fill="#E53935">PDF</text></svg>';
+        // HWP/HWPX 한글 아이콘
+        if (ext === '.hwp' || ext === '.hwpx') return '<svg viewBox="0 0 40 40" width="36" height="36"><rect x="4" y="2" width="32" height="36" rx="3" fill="#2979FF" opacity="0.15"/><rect x="4" y="2" width="32" height="36" rx="3" stroke="#2979FF" stroke-width="1.5" fill="none"/><text x="20" y="26" text-anchor="middle" font-size="12" font-weight="700" fill="#2979FF">\uD55C</text></svg>';
+        const map = {
+            image: { exts: CONFIG.PREVIEW_TYPES.image, icon: '\uD83D\uDDBC\uFE0F' },
+            code: { exts: CONFIG.PREVIEW_TYPES.code, icon: '\uD83D\uDCBB' },
+            text: { exts: CONFIG.PREVIEW_TYPES.text, icon: '\uD83D\uDCC4' },
+        };
+        for (const cat of Object.values(map)) {
+            if (cat.exts.includes(ext)) return cat.icon;
+        }
+        return '\uD83D\uDCC1';
+    },
+
+    getCategory(name) {
+        const ext = this.getExt(name);
+        for (const [cat, exts] of Object.entries(CONFIG.PREVIEW_TYPES)) {
+            if (exts.includes(ext)) return cat;
+        }
+        return 'other';
+    },
+
+    canPreview(name) {
+        const ext = this.getExt(name);
+        return [...CONFIG.PREVIEW_TYPES.image, ...CONFIG.PREVIEW_TYPES.text, ...CONFIG.PREVIEW_TYPES.code].includes(ext);
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    },
+
+    escapeAttr(text) {
+        return text.replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+};
+
+// ===== FILE MANAGER =====
+const FM = {
+    async init() {
+        const { createClient } = supabase;
+        State.client = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+        await this.loadFiles();
+    },
+
+    async loadFiles() {
+        UI.showLoading(true);
+        try {
+            const { data, error } = await State.client.storage
+                .from(CONFIG.BUCKET)
+                .list('', { limit: 1000, sortBy: { column: 'created_at', order: 'desc' } });
+            if (error) throw error;
+            State.files = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder');
+            UI.render();
+        } catch (e) {
+            UI.toast('파일 목록 조회 실패: ' + e.message, 'error');
+        } finally {
+            UI.showLoading(false);
+        }
+    },
+
+    async uploadFiles(fileList) {
+        const files = Array.from(fileList);
+        if (!files.length) return;
+
+        let ok = 0, fail = 0;
+        for (const file of files) {
+            const stored = Utils.encodeFileName(file.name);
+            try {
+                const { error } = await State.client.storage
+                    .from(CONFIG.BUCKET)
+                    .upload(stored, file, { cacheControl: '3600', upsert: false });
+                if (error) throw error;
+                ok++;
+                UI.toast(`${file.name} 업로드 완료`, 'success');
+            } catch (e) {
+                fail++;
+                UI.toast(`${file.name} 업로드 실패: ${e.message}`, 'error');
+            }
+        }
+        await this.loadFiles();
+    },
+
+    async deleteFile(storedName, displayName) {
+        UI.confirm(`"${displayName}"을(를) 삭제하시겠습니까?`, async () => {
+            try {
+                const { error } = await State.client.storage
+                    .from(CONFIG.BUCKET)
+                    .remove([storedName]);
+                if (error) throw error;
+                UI.toast(`${displayName} 삭제 완료`, 'success');
+                await this.loadFiles();
+            } catch (e) {
+                UI.toast('삭제 실패: ' + e.message, 'error');
+            }
+        });
+    },
+
+    async downloadFile(storedName, displayName) {
+        try {
+            const { data, error } = await State.client.storage
+                .from(CONFIG.BUCKET)
+                .download(storedName);
+            if (error) throw error;
+            const url = URL.createObjectURL(data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = displayName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            UI.toast('다운로드 실패: ' + e.message, 'error');
+        }
+    },
+
+    async previewFile(storedName, displayName) {
+        const ext = Utils.getExt(displayName);
+        if (!Utils.canPreview(displayName)) {
+            UI.toast('미리보기를 지원하지 않는 형식입니다', 'error');
+            return;
+        }
+        try {
+            if (CONFIG.PREVIEW_TYPES.image.includes(ext)) {
+                // Use public URL for images
+                const { data } = State.client.storage
+                    .from(CONFIG.BUCKET)
+                    .getPublicUrl(storedName);
+                UI.openModal(displayName, `<img src="${data.publicUrl}" alt="${Utils.escapeAttr(displayName)}">`);
+            } else {
+                const { data, error } = await State.client.storage
+                    .from(CONFIG.BUCKET)
+                    .download(storedName);
+                if (error) throw error;
+                const text = await data.text();
+
+                if (ext === '.csv') {
+                    UI.openModal(displayName, csvToTable(text));
+                } else if (ext === '.md') {
+                    UI.openModal(displayName, `<div style="white-space:pre-wrap;font-size:14px;line-height:1.7;">${Utils.escapeHtml(text)}</div>`);
+                } else {
+                    UI.openModal(displayName, `<pre>${Utils.escapeHtml(text)}</pre>`);
+                }
+            }
+        } catch (e) {
+            UI.toast('미리보기 실패: ' + e.message, 'error');
+        }
+    }
+};
+
+function csvToTable(text) {
+    const rows = text.split('\n').filter(r => r.trim());
+    if (!rows.length) return '<p>빈 CSV 파일입니다.</p>';
+    let html = '<div style="overflow-x:auto;"><table>';
+    rows.forEach((row, i) => {
+        const cells = row.split(',');
+        const tag = i === 0 ? 'th' : 'td';
+        html += '<tr>' + cells.map(c => `<${tag}>${Utils.escapeHtml(c.trim())}</${tag}>`).join('') + '</tr>';
+    });
+    html += '</table></div>';
+    return html;
+}
+
+// ===== UI MANAGER =====
+const UI = {
+    showLoading(show) {
+        document.getElementById('loading').style.display = show ? 'flex' : 'none';
+    },
+
+    render() {
+        const filtered = State.filter === 'all' ? State.files :
+            State.files.filter(f => Utils.getCategory(Utils.decodeFileName(f.name)) === State.filter);
+
+        // Stats
+        document.getElementById('fileCount').textContent = `${State.files.length}개`;
+        const totalBytes = State.files.reduce((s, f) => s + (f.metadata?.size || 0), 0);
+        document.getElementById('totalSize').textContent = Utils.formatSize(totalBytes);
+        document.getElementById('fileBadge').textContent = filtered.length;
+        // Assume 1GB limit
+        const pct = Math.min((totalBytes / (1024*1024*1024)) * 100, 100);
+        document.getElementById('storageBar').style.width = pct + '%';
+
+        const container = document.getElementById('fileContainer');
+        const emptyState = document.getElementById('emptyState');
+
+        if (filtered.length === 0) {
+            container.innerHTML = '';
+            emptyState.style.display = 'flex';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+
+        if (State.view === 'grid') {
+            this.renderGrid(filtered, container);
+        } else {
+            this.renderList(filtered, container);
+        }
+    },
+
+    renderGrid(files, container) {
+        container.className = 'file-grid';
+        container.innerHTML = files.map(f => {
+            const stored = f.name;
+            const display = Utils.decodeFileName(stored);
+            const ext = Utils.getExt(display);
+            const size = Utils.formatSize(f.metadata?.size || 0);
+            const date = Utils.formatDate(f.created_at);
+            const icon = Utils.getIcon(display);
+            const canPrev = Utils.canPreview(display);
+            const isImage = CONFIG.PREVIEW_TYPES.image.includes(ext);
+            const sa = Utils.escapeAttr(stored);
+            const da = Utils.escapeAttr(display);
+
+            let previewHtml;
+            if (isImage) {
+                const { data } = State.client.storage.from(CONFIG.BUCKET).getPublicUrl(stored);
+                previewHtml = `<img src="${data.publicUrl}" alt="${da}" loading="lazy">`;
+            } else {
+                previewHtml = `<div class="file-card-icon">${icon}</div>`;
+            }
+
+            return `
+            <div class="file-card">
+                <div class="file-card-preview">${previewHtml}</div>
+                <div class="file-card-name" title="${da}">${Utils.escapeHtml(display)}</div>
+                <div class="file-card-meta">
+                    <span>${size}</span><span>&middot;</span><span>${date}</span>
+                </div>
+                <div class="file-card-actions">
+                    <button class="card-btn download" onclick="FM.downloadFile('${sa}','${da}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        다운로드
+                    </button>
+                    ${canPrev ? `<button class="card-btn preview" onclick="FM.previewFile('${sa}','${da}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        미리보기
+                    </button>` : ''}
+                    <button class="card-btn delete" onclick="FM.deleteFile('${sa}','${da}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                        삭제
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    },
+
+    renderList(files, container) {
+        container.className = 'file-list';
+        container.innerHTML = files.map(f => {
+            const stored = f.name;
+            const display = Utils.decodeFileName(stored);
+            const size = Utils.formatSize(f.metadata?.size || 0);
+            const date = Utils.formatDate(f.created_at);
+            const icon = Utils.getIcon(display);
+            const canPrev = Utils.canPreview(display);
+            const sa = Utils.escapeAttr(stored);
+            const da = Utils.escapeAttr(display);
+
+            return `
+            <div class="file-list-item">
+                <div class="file-list-icon">${icon}</div>
+                <div class="file-list-name" title="${da}">${Utils.escapeHtml(display)}</div>
+                <div class="file-list-size">${size}</div>
+                <div class="file-list-date">${date}</div>
+                <div class="file-list-btns">
+                    <button class="list-btn" title="다운로드" onclick="FM.downloadFile('${sa}','${da}')">&#11015;&#65039;</button>
+                    ${canPrev ? `<button class="list-btn" title="미리보기" onclick="FM.previewFile('${sa}','${da}')">&#128065;&#65039;</button>` : ''}
+                    <button class="list-btn delete" title="삭제" onclick="FM.deleteFile('${sa}','${da}')">&#128465;&#65039;</button>
+                </div>
+            </div>`;
+        }).join('');
+    },
+
+    toast(msg, type = 'info') {
+        const c = document.getElementById('toastContainer');
+        const t = document.createElement('div');
+        t.className = `toast ${type}`;
+        const icons = { success: '\u2705', error: '\u274C', info: '\u2139\uFE0F' };
+        t.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span><span class="toast-msg">${Utils.escapeHtml(msg)}</span>`;
+        c.appendChild(t);
+        setTimeout(() => {
+            t.classList.add('removing');
+            setTimeout(() => t.remove(), 300);
+        }, 3000);
+    },
+
+    openModal(title, bodyHtml) {
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('modalBody').innerHTML = bodyHtml;
+        document.getElementById('previewModal').classList.add('active');
+    },
+
+    closeModal() {
+        document.getElementById('previewModal').classList.remove('active');
+        document.getElementById('modalBody').innerHTML = '';
+    },
+
+    confirm(msg, onOk) {
+        const c = document.getElementById('confirmContainer');
+        c.innerHTML = `
+        <div class="confirm-overlay" id="confirmOverlay">
+            <div class="confirm-box">
+                <h4>확인</h4>
+                <p>${Utils.escapeHtml(msg)}</p>
+                <div class="confirm-btns">
+                    <button id="confirmCancel">취소</button>
+                    <button class="danger" id="confirmOk">삭제</button>
+                </div>
+            </div>
+        </div>`;
+        document.getElementById('confirmCancel').onclick = () => { c.innerHTML = ''; };
+        document.getElementById('confirmOk').onclick = () => { c.innerHTML = ''; onOk(); };
+        document.getElementById('confirmOverlay').onclick = (e) => {
+            if (e.target === e.currentTarget) c.innerHTML = '';
+        };
+    },
+
+    toggleUpload() {
+        State.uploadOpen = !State.uploadOpen;
+        document.getElementById('uploadZone').style.display = State.uploadOpen ? 'block' : 'none';
+    }
+};
+
+// ===== EVENT SETUP =====
+document.addEventListener('DOMContentLoaded', async () => {
+    // Init
+    await FM.init();
+
+    // File input
+    const fileInput = document.getElementById('fileInput');
+
+    // Upload button
+    document.getElementById('uploadTrigger').addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput.click();
+    });
+    const dropzone = document.getElementById('dropzone');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            FM.uploadFiles(e.target.files);
+            e.target.value = '';
+        }
+    });
+
+    // Drag & drop (content area dropzone)
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length) FM.uploadFiles(e.dataTransfer.files);
+    });
+
+    // Hero dropzone
+    const heroDrop = document.getElementById('heroDropzone');
+    heroDrop.addEventListener('click', () => fileInput.click());
+    heroDrop.addEventListener('dragover', (e) => { e.preventDefault(); heroDrop.classList.add('drag-over'); });
+    heroDrop.addEventListener('dragleave', () => heroDrop.classList.remove('drag-over'));
+    heroDrop.addEventListener('drop', (e) => {
+        e.preventDefault();
+        heroDrop.classList.remove('drag-over');
+        if (e.dataTransfer.files.length) FM.uploadFiles(e.dataTransfer.files);
+    });
+
+    // Also support full-page drag & drop
+    document.body.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+
+    document.body.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length) FM.uploadFiles(e.dataTransfer.files);
+    });
+
+    // View toggle
+    document.querySelectorAll('[data-view]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            State.view = btn.dataset.view;
+            document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            UI.render();
+        });
+    });
+
+    // Filter
+    document.querySelectorAll('[data-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            State.filter = btn.dataset.filter;
+            document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            UI.render();
+        });
+    });
+
+    // Modal close
+    document.getElementById('modalOverlay').addEventListener('click', UI.closeModal);
+    document.getElementById('modalClose').addEventListener('click', UI.closeModal);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') UI.closeModal();
+    });
+});
+</script>
+
+</body>
+</html>

@@ -1,8 +1,11 @@
 # Credentials
 credentials.json
 client_secret.json
+client_secret_*.json
 token.json
 *.pickle
+supabase_pw.txt
+.streamlit/secrets.toml
 
 # Python
 __pycache__/
